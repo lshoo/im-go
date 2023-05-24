@@ -7,70 +7,35 @@ import (
 )
 
 type Server struct {
-	Ip string
+	Ip   string
 	Port int
 	// Online user map
-	Users map[string] *User
-	lock sync.RWMutex
+	Users map[string]*User
+	lock  sync.RWMutex
 
 	// Message channel
 	Message chan string
 }
 
-// Create server 
+// Create server
 func NewServer(ip string, port int) *Server {
-	server := & Server {
-		Ip: ip,
-		Port: port,
-		Users: make(map[string] *User),
+	server := &Server{
+		Ip:      ip,
+		Port:    port,
+		Users:   make(map[string]*User),
 		Message: make(chan string),
 	}
 
 	return server
 }
 
-// Listen Message goroutine of server, and response to all online users
-func (server *Server) Listen() {
-	for {
-		msg := <- server.Message
+// Step 1: Start Server, and server always listens connection
+// Step 2: Client connected the server(ip and port)
+// Step 3: Server listened the connection, and handel connection to create user, add user to online map
+// Step 4: Server write message to Message channel
+// Step 5: Server broadcast messge in Message channel to online user
 
-		server.lock.Lock()
-		
-		for _, user := range server.Users {
-			user.Channel <- msg
-		}
-
-		server.lock.Unlock()
-	}
-}
-// Server broadcast Message
-func (server *Server) Broadcast(user *User, msg string) {
-	message := "[" + user.Addr + "]" + user.Name + ":" + msg
-	
-	server.Message <- message
-}
-
-// Define connection handle
-func (server *Server) Handle(conn net.Conn) {
-	fmt.Println("Server handling", server)
-
-	user := NewUser(conn)
-
-	// Add User to online map
-	server.lock.Lock()
-	server.Users[user.Name] = user
-	server.lock.Unlock()
-
-	// broadcast user login message to online map
-	server.Broadcast(user, "已上线")
-
-	// blocking 
-	select {
-
-	}
-}
-
-// Start server
+// Step 1: Start server
 func (server *Server) Start() {
 	// Listen socket
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", server.Ip, server.Port))
@@ -84,7 +49,7 @@ func (server *Server) Start() {
 	defer listener.Close()
 
 	// Start listen user goroutine
-	go server.Listen()
+	go server.listen()
 
 	// Handle for each connection
 	for {
@@ -96,8 +61,47 @@ func (server *Server) Start() {
 			continue
 		}
 
-		go server.Handle(conn)
+		go server.handle(conn)
 
 	}
 }
 
+// Step 3: Define connection handle
+func (server *Server) handle(conn net.Conn) {
+	fmt.Println("Server handling", server)
+
+	user := NewUser(conn)
+
+	// Add User to online map
+	server.lock.Lock()
+	server.Users[user.Name] = user
+	server.lock.Unlock()
+
+	// broadcast user login message to online map
+	server.broadcast(user, "已上线")
+
+	// blocking
+	select {}
+}
+
+// Step 4: Server broadcast Message
+func (server *Server) broadcast(user *User, msg string) {
+	message := "[" + user.Addr + "]" + user.Name + ":" + msg
+
+	server.Message <- message
+}
+
+// Step 5: listen Message goroutine of server, and response to all online users
+func (server *Server) listen() {
+	for {
+		msg := <-server.Message
+
+		server.lock.Lock()
+
+		for _, user := range server.Users {
+			user.Channel <- msg
+		}
+
+		server.lock.Unlock()
+	}
+}
