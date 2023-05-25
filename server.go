@@ -72,27 +72,19 @@ func (server *Server) Start() {
 func (server *Server) handle(conn net.Conn) {
 	fmt.Println("Server handling", server)
 
-	user := NewUser(conn)
+	user := NewUser(conn, server)
 
-	// go user.ListenMessage()
-
-	// Add User to online map
-	server.lock.Lock()
-	server.Users[user.Name] = user
-	server.lock.Unlock()
-
-	// broadcast user login message to online map
-	server.broadcastConnected(user, "已上线")
+	user.Online()
 
 	// handle client message
-	go server.broadcastMessage(user)
+	go server.handleMessage(user)
 
 	// blocking
 	select {}
 }
 
-// Step 4: Server broadcastConnected Message
-func (server *Server) broadcastConnected(user *User, msg string) {
+// Step 4: Server broadcast connected Message
+func (server *Server) Broadcast(user *User, msg string) {
 	message := "[" + user.Addr + "]" + user.Name + ":" + msg
 
 	server.Message <- message
@@ -114,7 +106,7 @@ func (server *Server) listen() {
 }
 
 // Step 6: server handle client user message and broadcast to all online users
-func (server *Server) broadcastMessage(user *User) {
+func (server *Server) handleMessage(user *User) {
 
 	buf := make([]byte, 4096)
 
@@ -122,7 +114,8 @@ func (server *Server) broadcastMessage(user *User) {
 		n, err := user.conn.Read(buf)
 
 		if n == 0 {
-			server.broadcastConnected(user, "下线")
+			// server.broadcastConnected(user, "下线")
+			user.Offline()
 			return
 		}
 
@@ -137,7 +130,8 @@ func (server *Server) broadcastMessage(user *User) {
 		fmt.Println(msg)
 
 		// broadcast message
-		server.broadcastConnected(user, msg)
+		// server.Broadcast(user, msg)
+		user.BroadcastMessage(msg)
 	}
 
 }
