@@ -89,9 +89,9 @@ func (server *Server) handle(conn net.Conn) {
 		case <-isLive:
 			// Do nothing, active the select timer
 
-		case <-time.After(time.Second * 10):
+		case <-time.After(time.Second * 100):
 			// timeout, close the connection
-			user.SendMessage("超时,已下线")
+			user.SendMessage("超时,已下线 \n")
 
 			close(user.Channel)
 

@@ -96,6 +96,31 @@ func (user *User) HandleMessage(msg string) {
 			user.Name = name
 			user.SendMessage("用户名成功修改为：" + name + "\n")
 		}
+	} else if len(msg) > 7 && msg[:3] == "to|" {
+		// messafe format like: to|James|Hello
+
+		// Get receiver name
+		receiverName := strings.Split(msg, "|")[1]
+		if receiverName == "" {
+			user.SendMessage("The message format is invalid, please try again like this format: to|James|Hello \n")
+			return
+		}
+
+		// Get receiver
+		receiver, ok := user.server.Users[receiverName]
+		if !ok {
+			user.SendMessage("用户不存在\n")
+			return
+		}
+
+		// Get message
+		content := strings.Split(msg, "|")[2]
+		if content == "" {
+			user.SendMessage("The message format is invalid, please try again like this format: to|James|Hello \n")
+			return
+		}
+
+		receiver.SendMessage(user.Name + " says: " + content + "\n")
 	} else {
 		user.server.Broadcast(user, msg)
 	}
