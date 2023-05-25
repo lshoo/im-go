@@ -75,7 +75,7 @@ func (user *User) HandleMessage(msg string) {
 		user.server.lock.Lock()
 		for _, u := range user.server.Users {
 			msg := "[" + u.Addr + "]" + u.Name + ":" + "在线中\n"
-			user.sendMessage(msg)
+			user.SendMessage(msg)
 		}
 		user.server.lock.Unlock()
 	} else if len(msg) > 7 && msg[:7] == "rename|" {
@@ -85,7 +85,7 @@ func (user *User) HandleMessage(msg string) {
 		// check name exists
 		_, ok := user.server.Users[name]
 		if ok {
-			user.sendMessage("用户名已存在\n")
+			user.SendMessage("用户名已存在\n")
 		} else {
 			server := user.server
 			server.lock.Lock()
@@ -94,7 +94,7 @@ func (user *User) HandleMessage(msg string) {
 			user.server.lock.Unlock()
 
 			user.Name = name
-			user.sendMessage("用户名成功修改为：" + name + "\n")
+			user.SendMessage("用户名成功修改为：" + name + "\n")
 		}
 	} else {
 		user.server.Broadcast(user, msg)
@@ -102,6 +102,6 @@ func (user *User) HandleMessage(msg string) {
 }
 
 // User send message
-func (user *User) sendMessage(msg string) {
+func (user *User) SendMessage(msg string) {
 	user.conn.Write([]byte(msg))
 }

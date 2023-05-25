@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -76,11 +77,29 @@ func (server *Server) handle(conn net.Conn) {
 
 	user.Online()
 
+	// current user isLive
+	isLive := make(chan bool)
+
 	// handle client message
-	go server.handleMessage(user)
+	go server.handleMessage(user, isLive)
 
 	// blocking
-	select {}
+	for {
+		select {
+		case <-isLive:
+			// Do nothing, active the select timer
+
+		case <-time.After(time.Second * 10):
+			// timeout, close the connection
+			user.SendMessage("超时,已下线")
+
+			close(user.Channel)
+
+			conn.Close()
+
+			return // runtime.Goexit()
+		}
+	}
 }
 
 // Step 4: Server broadcast connected Message
@@ -106,7 +125,7 @@ func (server *Server) listen() {
 }
 
 // Step 6: server handle client user message and broadcast to all online users
-func (server *Server) handleMessage(user *User) {
+func (server *Server) handleMessage(user *User, channel chan bool) {
 
 	buf := make([]byte, 4096)
 
@@ -132,6 +151,9 @@ func (server *Server) handleMessage(user *User) {
 		// broadcast message
 		// server.Broadcast(user, msg)
 		user.HandleMessage(msg)
+
+		// show the user is live if any message
+		channel <- true
 	}
 
 }
