@@ -131,7 +131,7 @@ func (server *Server) handleMessage(user *User) {
 
 		// broadcast message
 		// server.Broadcast(user, msg)
-		user.BroadcastMessage(msg)
+		user.HandleMessage(msg)
 	}
 
 }

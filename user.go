@@ -66,7 +66,21 @@ func (user *User) Offline() {
 	server.Broadcast(user, "已下线")
 }
 
+// User handle message
+func (user *User) HandleMessage(msg string) {
+	if msg == "who" {
+		user.server.lock.Lock()
+		for _, u := range user.server.Users {
+			msg := "[" + u.Addr + "]" + u.Name + ":" + "在线中\n"
+			user.sendMessage(msg)
+		}
+		user.server.lock.Unlock()
+	} else {
+		user.server.Broadcast(user, msg)
+	}
+}
+
 // User send message
-func (user *User) BroadcastMessage(msg string) {
-	user.server.Broadcast(user, msg)
+func (user *User) sendMessage(msg string) {
+	user.conn.Write([]byte(msg))
 }
