@@ -1,6 +1,9 @@
 package main
 
-import "net"
+import (
+	"net"
+	"strings"
+)
 
 type User struct {
 	Name    string
@@ -75,6 +78,24 @@ func (user *User) HandleMessage(msg string) {
 			user.sendMessage(msg)
 		}
 		user.server.lock.Unlock()
+	} else if len(msg) > 7 && msg[:7] == "rename|" {
+		// rename format like: rename|James
+		name := strings.Split(msg, "|")[1]
+
+		// check name exists
+		_, ok := user.server.Users[name]
+		if ok {
+			user.sendMessage("用户名已存在\n")
+		} else {
+			server := user.server
+			server.lock.Lock()
+			delete(server.Users, user.Name)
+			server.Users[name] = user
+			user.server.lock.Unlock()
+
+			user.Name = name
+			user.sendMessage("用户名成功修改为：" + name + "\n")
+		}
 	} else {
 		user.server.Broadcast(user, msg)
 	}
