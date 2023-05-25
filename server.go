@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"sync"
 )
@@ -34,6 +35,7 @@ func NewServer(ip string, port int) *Server {
 // Step 3: Server listened the connection, and handel connection to create user, add user to online map
 // Step 4: Server write message to Message channel
 // Step 5: Server broadcast messge in Message channel to online user
+// Step 6: Server handle client message and broadcast
 
 // Step 1: Start server
 func (server *Server) Start() {
@@ -72,20 +74,25 @@ func (server *Server) handle(conn net.Conn) {
 
 	user := NewUser(conn)
 
+	// go user.ListenMessage()
+
 	// Add User to online map
 	server.lock.Lock()
 	server.Users[user.Name] = user
 	server.lock.Unlock()
 
 	// broadcast user login message to online map
-	server.broadcast(user, "已上线")
+	server.broadcastConnected(user, "已上线")
+
+	// handle client message
+	go server.broadcastMessage(user)
 
 	// blocking
 	select {}
 }
 
-// Step 4: Server broadcast Message
-func (server *Server) broadcast(user *User, msg string) {
+// Step 4: Server broadcastConnected Message
+func (server *Server) broadcastConnected(user *User, msg string) {
 	message := "[" + user.Addr + "]" + user.Name + ":" + msg
 
 	server.Message <- message
@@ -104,4 +111,33 @@ func (server *Server) listen() {
 
 		server.lock.Unlock()
 	}
+}
+
+// Step 6: server handle client user message and broadcast to all online users
+func (server *Server) broadcastMessage(user *User) {
+
+	buf := make([]byte, 4096)
+
+	for {
+		n, err := user.conn.Read(buf)
+
+		if n == 0 {
+			server.broadcastConnected(user, "下线")
+			return
+		}
+
+		if err != nil && err != io.EOF {
+			fmt.Println("Conn Read Error!", err)
+			return
+		}
+
+		// Extract user message from connection, and discard last char(\n)
+		msg := string(buf[:n-1])
+
+		fmt.Println(msg)
+
+		// broadcast message
+		server.broadcastConnected(user, msg)
+	}
+
 }
