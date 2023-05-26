@@ -97,7 +97,7 @@ func (user *User) HandleMessage(msg string) {
 			user.SendMessage("用户名成功修改为：" + name + "\n")
 		}
 	} else if len(msg) > 7 && msg[:3] == "to|" {
-		// messafe format like: to|James|Hello
+		// message format like: to|James|Hello
 
 		// Get receiver name
 		receiverName := strings.Split(msg, "|")[1]
